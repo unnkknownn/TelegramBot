@@ -1,235 +1,71 @@
-name:
-
-Telegram Notifications
+name: Telegram Notifications
 
 on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-push:
-branches: [main]
-pull_request:
-branches: [main]
-
-eny:
-DOTNET_VERSION: '8.0.x'
-PROJECT_PATH: 'src/SimpleApp'
-TEST_PATH: 'tests/SimpleApp.Tests'
+env:
+  DOTNET_VERSION: '8.0.x'
+  PROJECT_PATH: 'src/SimpleApp'
+  TEST_PATH: 'tests/SimpleApp.Tests'
 
 jobs:
-# Джоба 1: Подготовка и сборка
-build:
-name: I Сборка проекта
-runs-on: ubuntu-latest
+  build-and-test:
+    name: Сборка и Тестирование
+    runs-on: ubuntu-latest
 
-steps:
-- name:
-uses: actions/checkout@v4
+    steps:
+      - name: Загрузка кода
+        uses: actions/checkout@v4
 
-- пате: 0 Устанавливаем .NET
-uses: actions/setup-dotnet@v3
-with:
-dotnet-version: $
-{{ env. DOTNET_VERSION }}
+      - name: Установка .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-Восстанавливаем
+      - name: Восстановление зависимостей
+        run: dotnet restore
 
-Загружаем код
+      - name: Сборка проекта
+        run: dotnet build ${{ env.PROJECT_PATH }} --configuration Release --no-restore
 
-- name:
-сборки
+      - name: Запуск тестов
+        run: dotnet test ${{ env.TEST_PATH }} --verbosity normal
 
-- name:
+      # Уведомление при успехе
+      - name: Telegram Success Notification
+        if: success()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ✅ *СБОРКА УСПЕШНА!*
+            
+            *Проект:* ${{ github.repository }}
+            *Автор:* ${{ github.actor }}
+            *Ветка:* ${{ github.ref_name }}
+            *Коммит:* `${{ github.sha }}`
+            
+            Все этапы (сборка и тесты) пройдены успешно!
+            [Открыть в GitHub](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
-зависимости
-run: dotnet restore
-
-- nаmе: Д Собираем проект
-run: dotnet build $
-{{ env. PROJECT_PATH }} -- configuration
-Release -no-restore
-
-Уведомляем о начале
-
-uses: appleboy/telegram-
-
-action@master
-with:
-to: $
-{{ secrets. TELEGRAM_CHAT_ID }}
-token: $
-{{ secrets. TELEGRAM_BOT_TOKEN }}
-message: |
-*Начинаем сборку !*
-
-*Проект :* $
-{{ github.repository }}
-2 *ABTOP :* $
-{{ github.actor }}
-*Ветка :* S
-{{ github.ref_name }}
-*Коммит :* $
-{GITHUB_SHA:0:7}
-
-Ждите результат ...
-parse_mode: markdown
-disable_web_page_preview: true
-
-# Джоба 2: Запуск тестов
-test:
-name: / Запуск тестов
-needs: build
-runs-on: ubuntu-latest
-
-steps:
-- name: Загружаем код
-uses: actions/checkout@v4
-
-- name: Устанавливаем .NET
-uses: actions/setup-dotnet@v3
-
-with:
-dotnet-version: $
-{{ env. DOTNET_VERSION }}
-
-/ Запускаем тесты
-run: dotnet test $
-{{ env. TEST_PATH }} -- verbosity normal
--- logger "trx"
-
-- name:
-
-тесTOв
-id: test-results
-run: |
-# Простой анализ - считаем
-количество тестов
-echo "Тесты выполнены!"
-echo "results_analyzed=true" >>
-$GITHUB_OUTPUT
-
-# Джоба 3: Уведомление о результате
-notify:
-name: Итоговое уведомление
-needs: [build, test]
-runs-on: ubuntu-latest
-if: always() # Всегда выполняем,
-даже если предыдущие упали
-
-steps:
-- name:
-уведомление
-uses: appleboy/telegram-
-action@master
-with:
-to: $
-
-Анализируем результаты
-
-Отправляем итоговое уведомление
-uses: appleboy/telegram-action@master
-
-with:
-tp: $
-
-Успешно
-Пройдены
-
-@if (failure())
-
-Х *СБОРКА НЕ УДАЛАСЬ !*
-
-Что-то пошло не так ...
-Статус джоб:
-· Сборка: $
-{{ needs.build. result }}
-• Тесты: $
-{{ needs. test.result }}
-
-Проверьте логи!
-
-@if (cancelled() )
-
-*СБОРКА ОТМЕНЕНА*
-
-{{ secrets. TELEGRAM_CHAT_ID }}
-token: $
-{{ secrets. TELEGRAM_BOT_TOKEN }}
-message: |
-@if (success() )
-
-*СБОРКА УСПЕШНА !*
-
-Все этапы пройдены!
-Сборка:
-Тесты:
-
-Процесс был отменен.
-
-Х
-• Проект: $
-
-*Детали :*
-Проект: $
-
-{{ github.repository }}
-• Ветка: $
-{{ github.ref_name }}
-. KOMMMT: ${GITHUB_SHA:0:7}
-• Время: S(date +"%H:%M:%S")
-
-O. [OTkpытb в GitHub]($
-{{ github.server_url }}/$
-{{ github.repository }}/actions/runs/$
-{{ github.run_id }})
-parse_mode: markdown
-disable_web_page_preview: true
-
-# Джоба 4: Специальные уведомления
-special-notifications:
-пате: Специальные уведомления
-runs-on: ubuntu-latest
-if: always()
-
-steps:
-- name:
-Уведомление по расписанию
-if: github.event_name ==
-'schedule'
-uses: appleboy/telegram-
-action@master
-with:
-to: $
-{{ secrets. TELEGRAM_CHAT_ID }}
-token: $
-{{ secrets. TELEGRAM_BOT_TOKEN }}
-message: |
-*Ежедневная проверка !*
-
-- name:
-
-Проект $
-{{ github. repository }} npoBepeH no
-расписанию.
-CraTyc: ${{ job.status }}
-
-Время: $(date)
-parse_mode: markdown
-
-Уведомление о релизе
-if: startsWith(github.ref, 'refs/
-tags/')
-uses: appleboy/telegram-
-action@master
-with:
-to: $
-{{ secrets. TELEGRAM_CHAT_ID }}
-token: $
-{{ secrets. TELEGRAM_BOT_TOKEN }}
-message: |
-*НОВЫЙ РЕЛИЗ !*
-
-Выпущена новая версия: $
-{{ github.ref_name }}
-
-Поздравляем команду!
-Готово к развертыванию.
-parse_mode: markdown
+      # Уведомление при провале
+      - name: Telegram Failure Notification
+        if: failure()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_CHAT_ID }}
+          token: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          format: markdown
+          message: |
+            ❌ *СБОРКА ПРОВАЛЕНА!*
+            
+            *Проект:* ${{ github.repository }}
+            *Ветка:* ${{ github.ref_name }}
+            
+            Произошла ошибка на этапе сборки или тестов. Проверьте логи!
+            [Открыть логи](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
